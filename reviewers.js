@@ -83,6 +83,32 @@
             localStorage.setItem("_latest_reviewers_", JSON.stringify(reviewers));
         }
 
+        function convertGroupData() {
+            var $groups = jQuery('div.latest-reviewer-groups-container').find('span.latest-reviewer-group');
+            var groupData = [];
+            for (var i = 0; i < $groups.length; i++) {
+                groupData.push(jQuery($groups[i]).prop('reviewers'));
+            }
+            return groupData;
+        }
+
+        function addReviewer(emailAddress) {
+            searchUsersAsync(emailAddress).done(function(reviewerData) {
+                var all = AJS.$('#reviewers').auiSelect2("data");
+                if (all.find(function(i) {
+                        return i.item.id == reviewerData.item.id;
+                    })) {
+                    return;
+                }
+                all.push(reviewerData);
+                var e = new jQuery.Event("change");
+                e.from_joker_plugin = true;
+                e.added = reviewerData;
+                AJS.$('#reviewers').trigger(e);
+                AJS.$('#reviewers').auiSelect2("data", all);
+            });
+        }
+
         function injectLatestReviewers() {
             var form = jQuery('div.pull-request-create-form');
             jQuery('div.latest-reviewers-container').remove();
@@ -97,7 +123,11 @@
             if (groups) {
                 groups.forEach(function(group) {
                     var $group = jQuery('<span class="latest-reviewer-group"></span>');
-                    var $title = jQuery('<span class="latest-reviewer-group-title"></span>').text(group.title);
+                    var $title = jQuery('<span class="latest-reviewer-group-title">' +
+                        group.title +
+                        '<span class="latest-reviewer-group-title-delete">ㄨ</span>' +
+                        '<span class="latest-reviewer-group-title-edit">ㄍ</span>' +
+                        '</span>');
                     var $reviewers = jQuery('<span class="latest-reviewer-group-reviewers"></span>');
                     $group.append($title);
                     $group.append($reviewers);
@@ -105,7 +135,8 @@
                         group.reviewers.forEach(function(reviewer) {
                             var $avatar = jQuery('<img class="latest-reviewer-group-reviewer-avatar"></img>');
                             $avatar.data("reviewer", reviewer.emailAddress);
-                            $reviewers.append($reviewer);
+                            $avatar.prop('src', reviewer.avatar);
+                            $reviewers.append($avatar);
                         });
                     }
                     reviewerGroupsContainer.append($group);
@@ -113,19 +144,74 @@
                         e.preventDefault();
                         e.stopPropagation();
                         e.originalEvent.dataTransfer.dropEffect = 'copy';
-                    })
+                    });
+                    $group.prop("reviewers", group);
+                    $group.on('click', function(e) {
+                        var clickEdit = e.target.className == 'latest-reviewer-group-title-edit';
+                        if (clickEdit) {
+                            group.title = prompt('请输入新的名字', group.title);
+                            updateLocalGroups(convertGroupData());
+                            injectLatestReviewers();
+                            return;
+                        }
+                        var deleteGroup = e.target.className == 'latest-reviewer-group-title-delete';
+                        if (deleteGroup) {
+                            updateLocalGroups(convertGroupData().filter(function(g) {
+                                return g != group;
+                            }));
+                            injectLatestReviewers();
+                            return;
+                        }
+                        if (!group.reviewers) {
+                            return;
+                        }
+                        group.reviewers.forEach(function(r) {
+                            addReviewer(r.emailAddress);
+                        });
+                    });
                 });
+                $addGroup = jQuery('<span class="latest-reviewer-group-add-new">+</span>');
+                $addGroup.prop('title', '添加新分组');
+                reviewerGroupsContainer.append($addGroup);
+                $addGroup.on('click', function(e) {
+                    var currentGroups = convertGroupData();
+                    var newGroup = {
+                        title: '新分组'
+                    };
+                    currentGroups.push(newGroup);
+                    updateLocalGroups(currentGroups);
+                    injectLatestReviewers();
+                })
                 reviewerGroupsContainer.find(".latest-reviewer-group").on('drop', function(e) {
                     $group = jQuery(e.currentTarget);
                     console.log("drop on", $group, e.originalEvent.dataTransfer);
                     e.preventDefault();
                     e.stopPropagation();
                     var userToAdd = e.originalEvent.dataTransfer.getData("text/email");
-                    var iconUrl = e.originalEvent.dataTransfer.getData("text");
+                    var iconUrl = e.originalEvent.dataTransfer.getData("text/uri");
+                    var user = {
+                        emailAddress: userToAdd,
+                        avatar: iconUrl
+                    };
+                    var group = $group.prop("reviewers");
+                    if (!group.reviewers) {
+                        group.reviewers = [user];
+                    } else {
+                        if (group.reviewers.find(function(r) {
+                                return r.emailAddress == userToAdd;
+                            })) {
+                            return;
+                        } else {
+                            group.reviewers.push(user);
+                        }
+                    }
                     console.log("droped user", userToAdd);
                     var $user = jQuery('<img class="latest-reviewer-group-reviewer-avatar" src="' + iconUrl + '"></img>');
-                    $user.data('reviewer', userToAdd);
+                    $user.data('emailAddress', userToAdd);
+                    $user.prop('title', userToAdd);
                     $group.find(".latest-reviewer-group-reviewers").append($user);
+                    updateLocalGroups(convertGroupData());
+                    injectLatestReviewers();
                 });
             }
 
@@ -146,8 +232,8 @@
                     var reviewer = avatar.data('reviewer');
                     avatar.on('dragstart', function(e) {
                         e.originalEvent.dataTransfer.effectAllowed = 'copy';
-                        e.originalEvent.dataTransfer.dropEffect = 'copy';
                         e.originalEvent.dataTransfer.setData("text/email", reviewer);
+                        e.originalEvent.dataTransfer.setData("text/uri", e.currentTarget.src);
                         console.log("dragstart", e.originalEvent.dataTransfer);
                     });
                     avatar.on('dragend', function(e) {
@@ -157,20 +243,7 @@
                 });
                 reviewerUsersContainer.find('div.latest-reviewers-item').find('img').click(function() {
                     var reviewer = jQuery(this).data("reviewer");
-                    searchUsersAsync(reviewer).done(function(reviewerData) {
-                        var all = AJS.$('#reviewers').auiSelect2("data");
-                        if (all.find(function(i) {
-                                return i.item.id == reviewerData.item.id;
-                            })) {
-                            return;
-                        }
-                        all.push(reviewerData);
-                        var e = new jQuery.Event("change");
-                        e.from_joker_plugin = true;
-                        e.added = reviewerData;
-                        AJS.$('#reviewers').trigger(e);
-                        AJS.$('#reviewers').auiSelect2("data", all);
-                    });
+                    addReviewer(reviewer);
                 });
             }
 
@@ -200,23 +273,45 @@
         function injectInlineStyle() {
             jQuery('head').append(jQuery('<style type="text/css">' +
                 '.latest-reviewer-users-container,' +
-                '.latest-reviewer-groups-container { display: flex; }' +
-                'span.latest-reviewer-group {' +
-                'border: dashed 0.5px;' +
-                'padding: 4px;' +
-                'cursor: pointer;' +
+                '.latest-reviewer-groups-container { ' +
+                'display: flex; ' +
+                'flex-wrap: wrap;' +
                 '}' +
-                '' +
+                'span.latest-reviewer-group {' +
+                '   border: dashed 0.5px;' +
+                '   padding: 4px;' +
+                '   cursor: pointer;' +
+                '   max-width: 224px;' +
+                '   user-select: none;' +
+                '   margin: 4px 8px;' +
+                '}' +
+                '.latest-reviewer-group-title {' +
+                '    display: block;' +
+                '    width: 100%;' +
+                '    padding-right: 20px;' +
+                '}' +
                 'span.latest-reviewer-group-reviewers {' +
-                'display: flex;'+
+                '   display: flex;' +
+                '   flex-wrap: wrap;' +
+                '}' +
+                '.latest-reviewer-group-title-edit, .latest-reviewer-group-title-delete {' +
+                '    float: right;' +
+                '}' +
+                'span.latest-reviewer-group-add-new {' +
+                '    font-weight: 900;' +
+                '    font-size: 249%;' +
+                '    padding: 0px 10px;' +
+                '    margin: 2px;' +
+                '    color: goldenrod;' +
+                '    cursor: pointer;' +
                 '}' +
                 '.latest-reviewer-group-reviewer-avatar {' +
-                '	width: 16px;' +
-                '	height: 16px;' +
-                'margin: 2px;' +
-                'border: dashed 1px gold;' +
-                'background-color: gold;' +
-                'box-sizing: border-box;' +
+                '   width: 24px;' +
+                '   height: 24px;' +
+                '   margin: 2px;' +
+                '   border: dashed 1px gold;' +
+                '   background-color: gold;' +
+                '   box-sizing: border-box;' +
                 '}' +
                 'div.latest-reviewers-item > img {' +
                 '    width: 48px;' +
