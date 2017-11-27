@@ -136,6 +136,7 @@
                             var $avatar = jQuery('<img class="latest-reviewer-group-reviewer-avatar"></img>');
                             $avatar.data("reviewer", reviewer.emailAddress);
                             $avatar.prop('src', reviewer.avatar);
+                            $avatar.prop('title', reviewer.emailAddress);
                             $reviewers.append($avatar);
                         });
                     }
