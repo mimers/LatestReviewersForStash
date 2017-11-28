@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         保存常用reviewers
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.5
 // @description  try to take over the world!
 // @author       You
 // @match        *://*/*
