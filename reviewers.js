@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         保存常用reviewers
 // @namespace    http://tampermonkey.net/
-// @version      1.5
+// @version      1.8
 // @description  try to take over the world!
 // @author       You
 // @match        *://*/*
@@ -123,12 +123,12 @@
             if (groups) {
                 groups.forEach(function(group) {
                     var $group = jQuery('<span class="latest-reviewer-group"></span>');
-                    var $title = jQuery('<span class="latest-reviewer-group-title">' +
+                    var $title = jQuery('<span class="latest-reviewer-group-title"><b>' +
                         group.title +
-                        '<span class="latest-reviewer-group-title-delete">ㄨ</span>' +
-                        '<span class="latest-reviewer-group-title-edit">ㄍ</span>' +
+                        '</b><span class="latest-reviewer-group-title-delete"><svg width=16 height=16 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M12 14.5c0 0.825-0.675 1.5-1.5 1.5h-3c-0.825 0-1.5-0.675-1.5-1.5v-3c0-0.825 0.675-1.5 1.5-1.5h3c0.825 0 1.5 0.675 1.5 1.5v3z"></path><path d="M22 14.5c0 0.825-0.675 1.5-1.5 1.5h-3c-0.825 0-1.5-0.675-1.5-1.5v-3c0-0.825 0.675-1.5 1.5-1.5h3c0.825 0 1.5 0.675 1.5 1.5v3z"></path><path d="M12 24.5c0 0.825-0.675 1.5-1.5 1.5h-3c-0.825 0-1.5-0.675-1.5-1.5v-3c0-0.825 0.675-1.5 1.5-1.5h3c0.825 0 1.5 0.675 1.5 1.5v3z"></path><path d="M22 24.5c0 0.825-0.675 1.5-1.5 1.5h-3c-0.825 0-1.5-0.675-1.5-1.5v-3c0-0.825 0.675-1.5 1.5-1.5h3c0.825 0 1.5 0.675 1.5 1.5v3z"></path><path d="M28.503 5l3.497-3.497v-1.503h-1.503l-3.497 3.497-3.497-3.497h-1.503v1.503l3.497 3.497-3.497 3.497v1.503h1.503l3.497-3.497 3.497 3.497h1.503v-1.503z"></path><path d="M0 24h2v4h-2v-4z"></path><path d="M0 18h2v4h-2v-4z"></path><path d="M26 14h2v4h-2v-4z"></path><path d="M26 26h2v4h-2v-4z"></path><path d="M26 20h2v4h-2v-4z"></path><path d="M0 12h2v4h-2v-4z"></path><path d="M0 6h2v4h-2v-4z"></path><path d="M16 4h4v2h-4v-2z"></path><path d="M10 4h4v2h-4v-2z"></path><path d="M4 4h4v2h-4v-2z"></path><path d="M14 30h4v2h-4v-2z"></path><path d="M20 30h4v2h-4v-2z"></path><path d="M8 30h4v2h-4v-2z"></path><path d="M2 30h4v2h-4v-2z"></path></svg></span>' +
+                        '<span class="latest-reviewer-group-title-edit"><svg width=16 height=16 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M27 0c2.761 0 5 2.239 5 5 0 1.126-0.372 2.164-1 3l-2 2-7-7 2-2c0.836-0.628 1.874-1 3-1zM2 23l-2 9 9-2 18.5-18.5-7-7-18.5 18.5zM22.362 11.362l-14 14-1.724-1.724 14-14 1.724 1.724z"></path></svg></span>' +
                         '</span>');
-                    var $reviewers = jQuery('<span class="latest-reviewer-group-reviewers"></span>');
+                    var $reviewers = jQuery('<div class="latest-reviewer-group-reviewers"></div>');
                     $group.append($title);
                     $group.append($reviewers);
                     if (group.reviewers) {
@@ -147,22 +147,18 @@
                         e.originalEvent.dataTransfer.dropEffect = 'copy';
                     });
                     $group.prop("reviewers", group);
+                    $group.find(".latest-reviewer-group-title-edit").on('click', function(e) {
+                        group.title = prompt('请输入新的名字', group.title) || group.title;
+                        updateLocalGroups(convertGroupData());
+                        injectLatestReviewers();
+                    });
+                    $group.find(".latest-reviewer-group-title-delete").on('click', function function_name() {
+                        updateLocalGroups(convertGroupData().filter(function(g) {
+                            return g != group;
+                        }));
+                        injectLatestReviewers();
+                    });
                     $group.on('click', function(e) {
-                        var clickEdit = e.target.className == 'latest-reviewer-group-title-edit';
-                        if (clickEdit) {
-                            group.title = prompt('请输入新的名字', group.title);
-                            updateLocalGroups(convertGroupData());
-                            injectLatestReviewers();
-                            return;
-                        }
-                        var deleteGroup = e.target.className == 'latest-reviewer-group-title-delete';
-                        if (deleteGroup) {
-                            updateLocalGroups(convertGroupData().filter(function(g) {
-                                return g != group;
-                            }));
-                            injectLatestReviewers();
-                            return;
-                        }
                         if (!group.reviewers) {
                             return;
                         }
@@ -198,7 +194,7 @@
                     if (!group.reviewers) {
                         group.reviewers = [user];
                     } else {
-                        if (group.reviewers.find(function(r) {
+                        if (false && group.reviewers.find(function(r) {
                                 return r.emailAddress == userToAdd;
                             })) {
                             return;
@@ -289,14 +285,16 @@
                 '.latest-reviewer-group-title {' +
                 '    display: block;' +
                 '    width: 100%;' +
-                '    padding-right: 20px;' +
                 '}' +
-                'span.latest-reviewer-group-reviewers {' +
+                '.latest-reviewer-group-reviewers {' +
                 '   display: flex;' +
                 '   flex-wrap: wrap;' +
                 '}' +
                 '.latest-reviewer-group-title-edit, .latest-reviewer-group-title-delete {' +
                 '    float: right;' +
+                '    margin-right: 4px;' +
+                '    display: inline-block;' +
+                '    line-height: 1;' +
                 '}' +
                 'span.latest-reviewer-group-add-new {' +
                 '    font-weight: 900;' +

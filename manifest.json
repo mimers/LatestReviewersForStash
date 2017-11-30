@@ -1,0 +1,23 @@
+{
+    "name": "Reviewer：快捷添加Reviewer For Stash&Bitbucket",
+    "manifest_version": 2,
+    "version": "1.0",
+    "description": "快捷添加Reviewer",
+    "content_scripts": [
+    {
+        "matches": ["<all_urls>"],
+        "js": ["cs_loader.js"],
+        "run_at": "document_end",
+        "all_frames": true
+    }],
+    "icons":
+    {
+        "48": "icon_48.png",
+        "96": "icon_96.png",
+        "128": "icon_128.png"
+    },
+    "web_accessible_resources": [
+        "reviewers.js"
+    ],
+    "permissions": ["http://*/*", "https://*/*"]
+}
