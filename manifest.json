@@ -1,7 +1,7 @@
 {
-    "name": "Reviewer：快捷添加Reviewer For Stash&Bitbucket",
+    "name": "Reviewer：快捷添加Reviewers For Stash",
     "manifest_version": 2,
-    "version": "1.0",
+    "version": "1.0.1",
     "description": "快捷添加Reviewer",
     "content_scripts": [
     {
