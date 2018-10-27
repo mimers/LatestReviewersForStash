@@ -109,6 +109,14 @@
             });
         }
 
+        function removeReviewer(emailAddress) {
+            var reviewers = getLocalReviewers().filter(function (reviewer) {
+                return reviewer.emailAddress != emailAddress;
+            });
+            updateLocalReviewers(reviewers);
+            injectLatestReviewers();
+        }
+
         function injectLatestReviewers() {
             var form = jQuery('div.pull-request-create-form');
             jQuery('div.latest-reviewers-container').remove();
@@ -138,6 +146,16 @@
                             $avatar.prop('src', reviewer.avatar);
                             $avatar.prop('title', reviewer.emailAddress);
                             $reviewers.append($avatar);
+                            $avatar.on('click', function (e) {
+                                if (e.altKey) {
+                                    e.stopPropagation();
+                                    $avatar.remove();
+                                    group.reviewers = group.reviewers.filter(function (rev) {
+                                        return rev != reviewer;
+                                    })
+                                    updateLocalGroups(convertGroupData());
+                                }
+                            })
                         });
                     }
                     reviewerGroupsContainer.append($group);
@@ -148,6 +166,7 @@
                     });
                     $group.prop("reviewers", group);
                     $group.find(".latest-reviewer-group-title-edit").on('click', function(e) {
+                        e.stopPropagation();
                         group.title = prompt('请输入新的名字', group.title) || group.title;
                         updateLocalGroups(convertGroupData());
                         injectLatestReviewers();
@@ -238,14 +257,18 @@
                         e.stopPropagation();
                     })
                 });
-                reviewerUsersContainer.find('div.latest-reviewers-item').find('img').click(function() {
+                reviewerUsersContainer.find('div.latest-reviewers-item').find('img').click(function(e) {
                     var reviewer = jQuery(this).data("reviewer");
-                    addReviewer(reviewer);
+                    if (!e.altKey) {
+                        addReviewer(reviewer);
+                    } else {
+                        removeReviewer(reviewer);
+                    }
                 });
             }
 
             AJS.$('#reviewers').on('change', function(event) {
-                console.log('changing reviewers', JSON.stringify(event, 0, 2));
+                console.log('changing reviewers',event);
                 if (event.from_joker_plugin || !event.added) {
                     return;
                 }
@@ -317,6 +340,7 @@
                 '    display: block;' +
                 '    margin: 0 auto;' +
                 '    cursor: pointer;' +
+                '    transition: all ease 300ms;' +
                 '}' +
                 'div.latest-reviewers-item > span {' +
                 '    display: block;' +
