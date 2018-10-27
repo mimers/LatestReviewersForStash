@@ -2,6 +2,7 @@
     "name": "Reviewer：快捷添加Reviewers For Stash",
     "manifest_version": 2,
     "version": "1.0.3",
+    "version": "1.1",
     "description": "快捷添加Reviewer",
     "content_scripts": [
     {

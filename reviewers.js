@@ -31,6 +31,7 @@
             var deferred = jQuery.Deferred();
 
             var searchParams = { avatarSize: 128, permission: "LICENSED_USER", start: 0, filter: username };
+            var searchParams = { avatarSize: 128, permission: "LICENSED_USER", start: 0, filter: username.split('@')[0] };
 
             jQuery.get("/rest/api/latest/users", searchParams)
                 .done(function(data) {
